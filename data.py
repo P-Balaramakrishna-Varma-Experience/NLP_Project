@@ -18,12 +18,12 @@ def build_vocabularies(data_file):
     assert len(dep_typ) == 37
     vocab_deptyp = torchtext.vocab.build_vocab_from_iterator(dep_typ)
     
-    words = [["<unk>"]]
+    words = [["<unk>"], ["<unk>"]]
     TokenLists = conllu.parse_incr(open(data_file, "r", encoding="utf-8"))
     for TokenList in TokenLists:
         for token in TokenList:
             words.append([token["form"]])
-    vocab_words = torchtext.vocab.build_vocab_from_iterator(words)
+    vocab_words = torchtext.vocab.build_vocab_from_iterator(words, min_freq=2)
     vocab_words.set_default_index(vocab_words["<unk>"])
     return vocab_pos_tags, vocab_deptyp, vocab_words
 
