@@ -12,12 +12,14 @@ def build_vocabularies(data_file):
     pos_tags = [[i] for i in pos_tags]
     assert(len(pos_tags) == 17)
     vocab_pos_tags = torchtext.vocab.build_vocab_from_iterator(pos_tags)
+    vocab_pos_tags.append_token("pad")
     
     dep_typ = ["nsubj", "obj", "iobj", "csubj", "ccomp", "xcomp", "obl", "vocative", "expl", "dislocated", "advcl", "advmod", "discourse" , "aux", "cop", "mark",	 "nmod", "appos", "nummod", "acl", "amod", "det", "clf", "case", "conj", "cc",	 "fixed", "flat", "compound", "list", "parataxis", "orphan", "goeswith", "reparandum", "punct", "root", "dep"]
     dep_typ = [[i] for i in dep_typ]
     assert len(dep_typ) == 37
     vocab_deptyp = torchtext.vocab.build_vocab_from_iterator(dep_typ)
-    
+    vocab_deptyp.append_token("pad")
+
     words = [["<unk>"], ["<unk>"]]
     TokenLists = conllu.parse_incr(open(data_file, "r", encoding="utf-8"))
     for TokenList in TokenLists:
@@ -25,6 +27,7 @@ def build_vocabularies(data_file):
             words.append([token["form"]])
     vocab_words = torchtext.vocab.build_vocab_from_iterator(words, min_freq=2)
     vocab_words.set_default_index(vocab_words["<unk>"])
+    vocab_words.append_token("pad")
     return vocab_pos_tags, vocab_deptyp, vocab_words
 
 
@@ -62,6 +65,7 @@ def custom_collate(batch):
 
 
 # vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-train.conllu")
+# print(vocab_deptyp["pad"], vocab_pos_tags["pad"], vocab_words["pad"])
 # data_t = DepData("UD_English-EWT-master/en_ewt-ud-train.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
 # data_2 = DepData("UD_English-EWT-master/en_ewt-ud-test.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
 # data_3 = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu",  vocab_pos_tags, vocab_deptyp, vocab_words)
