@@ -109,7 +109,7 @@ class DepParser(nn.Module):
         r_head_arc = self.head_arc(v)
         r_tail_arc = self.tail_arc(v)
         r_head_lab = self.head_lab(v)
-        r_tail_lab = self.head_lab(v)
+        r_tail_lab = self.tail_lab(v)
 
         # biaffine layer (arc)
         arc_scores = self.arc_biaffine(r_head_arc, r_tail_arc)
