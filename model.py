@@ -22,16 +22,27 @@ class variable_class_biaffine(nn.Module):
         return affine_term + bias_term
 
 class fixed_class_biaffine(nn.Module):
-    pass
+    def __init__(self, l, d) -> None:
+        super().__init__()
+        self.l = l
+        self.d = d
+        self.W = torch.nn.Parameter(torch.zeros((l, 2 * d)))
+        self.b = torch.nn.Parameter(torch.zeros((l,)))
 
-
+    def forward(self, heads, tails):
+        #bias term
+        bias_matrix = self.b.expand(heads.shape[1] ** 2, self.l)
+        bias_matrix = bias_matrix.reshape(heads.shape[1], heads.shape[1], self.l)
+        bias_matrix = bias_matrix.expand(heads.shape[0], heads.shape[1], heads.shape[1], self.l)
+        return bias_matrix
 
 
 class DepParser(nn.Module):
-    def __init__(self, word_vocab, pos_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size):
+    def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size):
         super().__init__()
         self.word_vocab = word_vocab
         self.pos_vocab = pos_vocab
+        self.dep_vocab = dep_vocab
         self.word_emb_size = word_emb_size
         self.pos_emb_size = pos_emb_size
         self.hidden_dim = hidden_dim
@@ -74,6 +85,8 @@ class DepParser(nn.Module):
         # Biaffine layer (arc)
         self.arc_biaffine = variable_class_biaffine(reduced_size)
 
+        # Biaffine layer (label)
+        self.label_biaffine = fixed_class_biaffine(len(self.dep_vocab), reduced_size)
 
 
     def forward(self, X):
@@ -101,7 +114,12 @@ class DepParser(nn.Module):
         # biaffine layer (arc)
         arc_scores = self.arc_biaffine(r_head_arc, r_tail_arc)
         assert(arc_scores.shape == (X.shape[0], X.shape[1], X.shape[1]))
-        return arc_scores
+        
+        # biaffine layer (label)
+        label_scores = self.label_biaffine(r_head_lab, r_tail_lab)
+        assert(label_scores.shape == (X.shape[0], X.shape[1], X.shape[1], len(self.dep_vocab)))
+
+        return arc_scores, label_scores
 
 
 # vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
@@ -110,9 +128,9 @@ class DepParser(nn.Module):
 # data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
 
 # device = torch.device("cuda")
-# a = DepParser(vocab_words, vocab_pos_tags, 100, 20, 128, 2, 60).to(device)
+# a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
 # for X in data:
 #     X = X.to(device)
 #     y = a(X)
-#     sum = y.sum()
+#     sum = y[0].sum() + y[1].sum()
 #     sum.backward()
