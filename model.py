@@ -5,6 +5,28 @@ from data import *
 #hyperparmeter
 #word_emb_size, pos_emb_size, hidden_dimesntion, no_layers, reduced_size (<hidden_dim)
 
+class variable_class_biaffine(nn.Module):
+    def __init__(self, d) -> None:
+        super().__init__()
+        self.d = d
+        self.W = torch.nn.Parameter(torch.zeros((d, d)))
+        self.b = torch.nn.Parameter(torch.zeros((d,)))
+        
+    def forward(self, heads, tails):
+        HW = torch.einsum("hij, jk -> hik", heads, self.W)
+        #print(HW.shape, tails.shape)
+        affine_term = torch.einsum("hij, hkj -> hik", HW, tails)
+        bias_matrix = self.b.expand(heads.shape[1], self.d)
+        bias_term = torch.einsum("hij, kj -> hik", heads, bias_matrix)
+        #print(bias_term.shape, affine_term.shape)
+        return affine_term + bias_term
+
+class fixed_class_biaffine(nn.Module):
+    pass
+
+
+
+
 class DepParser(nn.Module):
     def __init__(self, word_vocab, pos_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size):
         super().__init__()
@@ -49,6 +71,10 @@ class DepParser(nn.Module):
             nn.ReLU()
         )
 
+        # Biaffine layer (arc)
+        self.arc_biaffine = variable_class_biaffine(reduced_size)
+
+
 
     def forward(self, X):
         # Embedding layer
@@ -72,16 +98,21 @@ class DepParser(nn.Module):
         r_head_lab = self.head_lab(v)
         r_tail_lab = self.head_lab(v)
 
+        # biaffine layer (arc)
+        arc_scores = self.arc_biaffine(r_head_arc, r_tail_arc)
+        assert(arc_scores.shape == (X.shape[0], X.shape[1], X.shape[1]))
+        return arc_scores
 
 
-
-# vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-train.conllu")
+# vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
 # #print(vocab_deptyp["pad"], vocab_pos_tags["pad"], vocab_words["pad"])
-# data_t = DepData("UD_English-EWT-master/en_ewt-ud-train.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
+# data_t = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
 # data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
 
 # device = torch.device("cuda")
 # a = DepParser(vocab_words, vocab_pos_tags, 100, 20, 128, 2, 60).to(device)
 # for X in data:
 #     X = X.to(device)
-#     a(X)
+#     y = a(X)
+#     sum = y.sum()
+#     sum.backward()

@@ -3,3 +3,6 @@ dict_keys(['id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'de
 - enhanced depenecnies?
 - subtype dependencies?
 - Deal with padding? [nothing to be done!!! just keep in mind]
+
+- droput
+- initiaziion paramters
