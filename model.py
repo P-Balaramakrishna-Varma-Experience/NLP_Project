@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from data import *
+from tqdm import tqdm
 
 #hyperparmeter
 #word_emb_size, pos_emb_size, hidden_dimesntion, no_layers, reduced_size (<hidden_dim)
@@ -110,6 +111,7 @@ class DepParser(nn.Module):
         r_tail_arc = self.tail_arc(v)
         r_head_lab = self.head_lab(v)
         r_tail_lab = self.tail_lab(v)
+        assert(r_head_arc.shape == (X.shape[0], X.shape[1], self.reduced_size))
 
         # biaffine layer (arc)
         arc_scores = self.arc_biaffine(r_head_arc, r_tail_arc)
@@ -122,15 +124,16 @@ class DepParser(nn.Module):
         return arc_scores, label_scores
 
 
-# vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
-# #print(vocab_deptyp["pad"], vocab_pos_tags["pad"], vocab_words["pad"])
-# data_t = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
-# data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
+vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
+#print(vocab_deptyp["pad"], vocab_pos_tags["pad"], vocab_words["pad"])
+data_t = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
+data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
 
-# device = torch.device("cuda")
-# a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
-# for X in data:
-#     X = X.to(device)
-#     y = a(X)
-#     sum = y[0].sum() + y[1].sum()
-#     sum.backward()
+device = torch.device("cuda")
+print(device)
+a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
+for X in tqdm(data):
+    X = X.to(device)
+    y = a(X)
+    sum = y[0].sum() + y[1].sum()
+    sum.backward()

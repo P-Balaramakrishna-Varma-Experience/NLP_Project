@@ -6,3 +6,7 @@ dict_keys(['id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'de
 
 - droput
 - initiaziion paramters
+
+## optimization
+- multigpu
+- pytorch 2.0
