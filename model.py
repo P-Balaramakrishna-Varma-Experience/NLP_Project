@@ -66,8 +66,8 @@ class DepParser(nn.Module):
         self.reduced_size = reduced_size
 
         # Embedding layer
-        self.word_embd = nn.Embedding(len(word_vocab), word_emb_size, padding_idx=word_vocab["pad"])
-        self.pos_embd = nn.Embedding(len(pos_vocab), pos_emb_size, padding_idx=pos_vocab["pad"])
+        self.word_embd = nn.Embedding(len(word_vocab), word_emb_size, padding_idx=word_vocab["<pad>"])
+        self.pos_embd = nn.Embedding(len(pos_vocab), pos_emb_size, padding_idx=pos_vocab["<pad>"])
 
         # Context layer
         self.blstm = torch.nn.LSTM(word_emb_size + pos_emb_size, hidden_dim, bilstm_layers, batch_first=True, bidirectional=True)
@@ -142,7 +142,7 @@ class DepParser(nn.Module):
 
 if __name__ == "__main__":
     vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
-    #print(vocab_deptyp["pad"], vocab_pos_tags["pad"], vocab_words["pad"])
+    #print(vocab_deptyp["<pad>"], vocab_pos_tags["<pad>"], vocab_words["<pad>"])
     data_t = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
     data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
 
@@ -151,9 +151,10 @@ if __name__ == "__main__":
     a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
     for X in tqdm(data):
         X = X.to(device)
-
         pred_arc, pred_labels = a(X)
-        loss_arcs = torch.nn.functional.cross_entropy(pred_arc[:, :, 1:], X[:, 1:, 3]).mean()
-        loss_labels = torch.nn.functional.cross_entropy(pred_labels[:, :, 1:], X[:, 1:, 4], ignore_index=vocab_deptyp["pad"]).mean()
+        label_mask = X[:, 1:, 1] != 0
+        pred_mask = torch.unsqueeze(label_mask, dim=1).expand(label_mask.shape[0], label_mask.shape[1] + 1, label_mask.shape[1])
+        loss_arcs = torch.nn.functional.cross_entropy(pred_arc[:, :, 1:][pred_mask], X[:, 1:, 3][label_mask]).mean()    
+        loss_labels = torch.nn.functional.cross_entropy(pred_labels[:, :, :], X[:, :, 4], ignore_index=vocab_deptyp["<pad>"]).mean()
         loss = loss_arcs + loss_labels
         loss.backward()
