@@ -42,6 +42,7 @@ class DepData(Dataset):
         TokenLists = conllu.parse_incr(open(data_file, "r", encoding="utf-8"))
         for TokenList in TokenLists:
             data = []
+            data.append([0, self.vocab_words["pad"], self.vocab_pos_tags["pad"], 0, self.vocab_deptyp["pad"]])
             for token in TokenList:
                 if type(token["id"]) == int:
                     data.append([token["id"], self.vocab_words[token["form"]], self.vocab_pos_tags[token["upos"]], token["head"], self.vocab_deptyp[token["deprel"].split(":")[0]]])

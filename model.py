@@ -41,16 +41,16 @@ class fixed_class_biaffine(nn.Module):
         # head U tail term
         UT = torch.einsum("ij, hkj -> hik", self.U, tails)
         HUT = torch.einsum("hri, hir -> hr", heads, UT)
-        to_expand = torch.unsqueeze(HUT, dim=2)
-        head_u_tail_term = to_expand.expand(tails.shape[0], tails.shape[1], self.l)
+        to_expand = torch.unsqueeze(HUT, dim=1)
+        head_u_tail_term = to_expand.expand(tails.shape[0], self.l, tails.shape[1])
 
         # tails head concat term
         tails_head_cat = torch.cat((tails, best_heads), dim=2)
-        tails_head_term = torch.einsum("ij, hkj -> hki", self.W, tails_head_cat)
+        tails_head_term = torch.einsum("ij, hkj -> hik", self.W, tails_head_cat)
 
         # bias term 
-        bias_matrix = self.b.expand(tails.shape[1], self.l)
-        bias_term = bias_matrix.expand(tails.shape[0], tails.shape[1], self.l)
+        bias_matrix = self.b.expand(tails.shape[1], self.l).T
+        bias_term = bias_matrix.expand(tails.shape[0], self.l, tails.shape[1])
         return tails_head_term + bias_term + head_u_tail_term
 
 class DepParser(nn.Module):
@@ -134,7 +134,7 @@ class DepParser(nn.Module):
         
         # biaffine layer (label)
         label_scores = self.label_biaffine(r_head_lab, r_tail_lab, arc_scores)
-        assert(label_scores.shape == (X.shape[0], X.shape[1], len(self.dep_vocab)))
+        assert(label_scores.shape == (X.shape[0], len(self.dep_vocab), X.shape[1]))
 
         return arc_scores, label_scores
 
@@ -151,6 +151,9 @@ if __name__ == "__main__":
     a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
     for X in tqdm(data):
         X = X.to(device)
-        y = a(X)
-        sum = y[0].sum() + y[1].sum()
-        sum.backward()
+
+        pred_arc, pred_labels = a(X)
+        loss_arcs = torch.nn.functional.cross_entropy(pred_arc[:, :, 1:], X[:, 1:, 3]).mean()
+        loss_labels = torch.nn.functional.cross_entropy(pred_labels[:, :, 1:], X[:, 1:, 4], ignore_index=vocab_deptyp["pad"]).mean()
+        loss = loss_arcs + loss_labels
+        loss.backward()
