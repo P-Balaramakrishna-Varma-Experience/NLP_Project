@@ -152,9 +152,12 @@ if __name__ == "__main__":
     for X in tqdm(data):
         X = X.to(device)
         pred_arc, pred_labels = a(X)
-        label_mask = X[:, 1:, 1] != 0
-        pred_mask = torch.unsqueeze(label_mask, dim=1).expand(label_mask.shape[0], label_mask.shape[1] + 1, label_mask.shape[1])
-        loss_arcs = torch.nn.functional.cross_entropy(pred_arc[:, :, 1:][pred_mask], X[:, 1:, 3][label_mask]).mean()    
-        loss_labels = torch.nn.functional.cross_entropy(pred_labels[:, :, :], X[:, :, 4], ignore_index=vocab_deptyp["<pad>"]).mean()
+
+        loss_arcs = 0
+        for sen in range(X.shape[0]):
+            label_mask = X[sen, :, 1] != 0
+            pred_mask = label_mask.expand(X.shape[1], label_mask.shape[0])
+            loss_arcs += torch.nn.functional.cross_entropy(pred_arc[sen][pred_mask].reshape((X.shape[1], -1)).T, X[sen][label_mask][:,3]).sum()    
+        loss_labels = torch.nn.functional.cross_entropy(pred_labels[:, :, :], X[:, :, 4], ignore_index=vocab_deptyp["<pad>"]).sum()
         loss = loss_arcs + loss_labels
         loss.backward()
