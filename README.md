@@ -18,3 +18,13 @@ have visulaiexe spit into two parts
 - root word progression throught the system  (verify) -- [two option biltml layer expriment and decide]
 
 - test accuryise properly
+
+
+
+## performance
+- 20sec per epoc (6 sec for loss function value !!)
+- have to check in ada bigger bactch size, and parallizing
+
+
+## Correctness
+- Variable and fixed class biaffine

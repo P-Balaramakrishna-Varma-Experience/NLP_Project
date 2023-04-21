@@ -34,7 +34,7 @@ class fixed_class_biaffine(nn.Module):
     def forward(self, heads, tails, scores):
         best_heads_indices = scores.argmax(dim=1)
         assert(best_heads_indices.shape == (tails.shape[0], tails.shape[1]))
-        best_heads = torch.ones(tails.shape).to(device)
+        best_heads = torch.ones(tails.shape).to(heads.device)
         for i in range(len(tails)):
             best_heads[i] = heads[i, best_heads_indices[i]]
         
