@@ -54,7 +54,7 @@ class fixed_class_biaffine(nn.Module):
         return tails_head_term + bias_term + head_u_tail_term
 
 class DepParser(nn.Module):
-    def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size):
+    def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size, mlp_hidden_dim):
         super().__init__()
         self.word_vocab = word_vocab
         self.pos_vocab = pos_vocab
@@ -64,6 +64,7 @@ class DepParser(nn.Module):
         self.hidden_dim = hidden_dim
         self.bilstm_layers = bilstm_layers
         self.reduced_size = reduced_size
+        self.mlp_hidden_dim = mlp_hidden_dim
 
         # Embedding layer
         self.word_embd = nn.Embedding(len(word_vocab), word_emb_size, padding_idx=word_vocab["<pad>"])
@@ -74,27 +75,27 @@ class DepParser(nn.Module):
 
         # Data filtering layer
         self.head_arc = nn.Sequential(
-            nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, reduced_size),
+            nn.Linear(mlp_hidden_dim, reduced_size),
             nn.ReLU()
         )
         self.tail_arc = nn.Sequential(
-            nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, reduced_size),
+            nn.Linear(mlp_hidden_dim, reduced_size),
             nn.ReLU()
         )
         self.head_lab = nn.Sequential(
-            nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, reduced_size),
+            nn.Linear(mlp_hidden_dim, reduced_size),
             nn.ReLU()
         )
         self.tail_lab = nn.Sequential(
-            nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, reduced_size),
+            nn.Linear(mlp_hidden_dim, reduced_size),
             nn.ReLU()
         )
 
@@ -113,13 +114,11 @@ class DepParser(nn.Module):
         pos = X[:, :, 2]
         pos_embeded = self.pos_embd(pos)
         x = torch.concatenate((word_embeded, pos_embeded), dim=2)
-        
         assert(x.shape == (X.shape[0], X.shape[1], self.word_emb_size + self.pos_emb_size))
 
         # context layer
         v, _ = self.blstm(x)
         assert(v.shape == (x.shape[0], x.shape[1], 2 * self.hidden_dim))
-
 
         # data filtering layer
         r_head_arc = self.head_arc(v)
@@ -141,14 +140,15 @@ class DepParser(nn.Module):
 
 
 if __name__ == "__main__":
-    vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-dev.conllu")
-    #print(vocab_deptyp["<pad>"], vocab_pos_tags["<pad>"], vocab_words["<pad>"])
-    data_t = DepData("UD_English-EWT-master/en_ewt-ud-dev.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
-    data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
-
     device = torch.device("cuda")
     print(device)
-    a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60).to(device)
+
+    vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-train.conllu")
+    data_t = DepData("UD_English-EWT-master/en_ewt-ud-train.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
+    data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)
+
+    a = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, 100, 20, 128, 2, 60, 50).to(device)
+
     for X in tqdm(data):
         X = X.to(device)
         pred_arc, pred_labels = a(X)

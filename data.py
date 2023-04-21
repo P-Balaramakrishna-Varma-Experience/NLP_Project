@@ -8,9 +8,9 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 def build_vocabularies(data_file):
-    pos_tags = [ "ADJ", "ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NOUN", "NUM", "PART", "PRON", "PROPN", "PUNCT", "SCONJ", "SYM", "VERB", "X", "root"]
+    pos_tags = [ "ADJ", "ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NOUN", "NUM", "PART", "PRON", "PROPN", "PUNCT", "SCONJ", "SYM", "VERB", "X"]
     pos_tags = [[i] for i in pos_tags]
-    assert(len(pos_tags) == 17 + 1)
+    assert(len(pos_tags) == 17)
     vocab_pos_tags = torchtext.vocab.build_vocab_from_iterator(pos_tags, specials=["<pad>"], special_first=True)
     
     dep_typ = ["nsubj", "obj", "iobj", "csubj", "ccomp", "xcomp", "obl", "vocative", "expl", "dislocated", "advcl", "advmod", "discourse" , "aux", "cop", "mark",	 "nmod", "appos", "nummod", "acl", "amod", "det", "clf", "case", "conj", "cc",	 "fixed", "flat", "compound", "list", "parataxis", "orphan", "goeswith", "reparandum", "punct", "root", "dep"]
