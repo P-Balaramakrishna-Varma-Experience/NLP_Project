@@ -55,7 +55,7 @@ class fixed_class_biaffine(nn.Module):
 
 
 class DepParser(nn.Module):
-    def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size, mlp_hidden_dim):
+    def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, arch_mlp_size, label_mlp_size, dropout):
         super().__init__()
         self.word_vocab = word_vocab
         self.pos_vocab = pos_vocab
@@ -64,47 +64,45 @@ class DepParser(nn.Module):
         self.pos_emb_size = pos_emb_size
         self.hidden_dim = hidden_dim
         self.bilstm_layers = bilstm_layers
-        self.reduced_size = reduced_size
-        self.mlp_hidden_dim = mlp_hidden_dim
+        self.arch_mlp_size = arch_mlp_size
+        self.label_mlp_size = label_mlp_size
+        self.dropout = dropout
+
 
         # Embedding layer
         self.word_embd = nn.Embedding(len(word_vocab), word_emb_size, padding_idx=word_vocab["<pad>"])
         self.pos_embd = nn.Embedding(len(pos_vocab), pos_emb_size, padding_idx=pos_vocab["<pad>"])
 
         # Context layer
-        self.blstm = torch.nn.LSTM(word_emb_size + pos_emb_size, hidden_dim, bilstm_layers, batch_first=True, bidirectional=True)
+        self.blstm = torch.nn.LSTM(word_emb_size + pos_emb_size, hidden_dim, bilstm_layers, batch_first=True, bidirectional=True, dropout=dropout)
 
         # Data filtering layer
         self.head_arc = nn.Sequential(
-            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
+            nn.Linear(2 * hidden_dim, arch_mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_hidden_dim, reduced_size),
-            nn.ReLU()
+            nn.Dropout(dropout)
         )
         self.tail_arc = nn.Sequential(
-            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
+            nn.Linear(2 * hidden_dim, arch_mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_hidden_dim, reduced_size),
-            nn.ReLU()
+            nn.Dropout(dropout)
         )
         self.head_lab = nn.Sequential(
-            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
+            nn.Linear(2 * hidden_dim, label_mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_hidden_dim, reduced_size),
-            nn.ReLU()
+            nn.Dropout(dropout)
         )
         self.tail_lab = nn.Sequential(
-            nn.Linear(2 * hidden_dim, mlp_hidden_dim),
+            nn.Linear(2 * hidden_dim, label_mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_hidden_dim, reduced_size),
-            nn.ReLU()
+            nn.Dropout(dropout)
         )
 
         # Biaffine layer (arc)
-        self.arc_biaffine = variable_class_biaffine(reduced_size)
+        self.arc_biaffine = variable_class_biaffine(arch_mlp_size)
 
         # Biaffine layer (label)
-        self.label_biaffine = fixed_class_biaffine(len(self.dep_vocab), reduced_size)
+        self.label_biaffine = fixed_class_biaffine(len(self.dep_vocab), label_mlp_size)
 
 
     def forward(self, X):
@@ -126,7 +124,8 @@ class DepParser(nn.Module):
         r_tail_arc = self.tail_arc(v)
         r_head_lab = self.head_lab(v)
         r_tail_lab = self.tail_lab(v)
-        assert(r_head_arc.shape == (X.shape[0], X.shape[1], self.reduced_size))
+        assert(r_head_arc.shape == (X.shape[0], X.shape[1], self.arch_mlp_size))
+        assert(r_tail_lab.shape == (X.shape[0], X.shape[1], self.label_mlp_size))
 
         # biaffine layer (arc)
         arc_scores = self.arc_biaffine(r_head_arc, r_tail_arc)
@@ -143,7 +142,7 @@ class DepParser(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     print(device)
-
+    # oudated
     vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-train.conllu")
     data_t = DepData("UD_English-EWT-master/en_ewt-ud-train.conllu", vocab_pos_tags, vocab_deptyp, vocab_words)
     data = DataLoader(data_t, batch_size=32, shuffle=True, collate_fn=custom_collate)

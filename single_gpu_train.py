@@ -3,9 +3,16 @@ from tqdm import tqdm
 
 from data import *
 from model import *
+import math
 
 
+import matplotlib.pyplot as plt
 
+def plot(valid_losss, train_losss):
+    plt.plot(valid_losss, label="valid loss")
+    plt.plot(train_losss, label="train loss")
+    plt.legend()
+    plt.savefig("loss.png")
 
 
 def train_epoch(model, dataloader, loss_func, optimizer, device):
@@ -72,8 +79,9 @@ def single_gpu_train(hypar):
     pos_embedding_dim = hypar["pos_embedding_dim"]
     lstm_hidden_dim = hypar["lstm_hidden_dim"]
     lstm_num_layers = hypar["lstm_num_layers"]
-    reduce_dim = hypar["reduce_dim"]
-    mlp_hidden_dim = hypar["mlp_hidden_dim"]
+    arch_mlp_size = hypar["arch_mlp_size"]
+    label_mlp_size = hypar["label_mlp_size"]
+    dropout = hypar["dropout"]
 
     ## data processing
     vocab_pos_tags, vocab_deptyp, vocab_words = build_vocabularies("UD_English-EWT-master/en_ewt-ud-train.conllu")
@@ -86,8 +94,8 @@ def single_gpu_train(hypar):
     test_dataloader = DataLoader(data_test, batch_size=batch_size, shuffle=False, collate_fn=custom_collate)
 
     ## model, optimizer, loss function
-    model = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, word_embedding_dim, pos_embedding_dim, lstm_hidden_dim, lstm_num_layers, reduce_dim, mlp_hidden_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    model = DepParser(vocab_words, vocab_pos_tags, vocab_deptyp, word_embedding_dim, pos_embedding_dim, lstm_hidden_dim, lstm_num_layers, arch_mlp_size, label_mlp_size, dropout).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, betas=(0.9, 0.9))
     loss_func = loss_cal
 
     ## training
@@ -100,10 +108,16 @@ def single_gpu_train(hypar):
         valid_losss.append(valid_loss)
         train_losss.append(train_loss)
     
-    return valid_losss, train_losss
+    stats = eval(model, test_dataloader, loss_func, device)
+
+
+    return valid_losss, train_losss, stats
 
 
 
 if __name__ == "__main__":
-    hypar = {"word_embedding_dim": 100, "pos_embedding_dim": 20, "lstm_hidden_dim": 128, "lstm_num_layers": 2, "reduce_dim": 60, "mlp_hidden_dim": 50, "batch_size": 32, "lr": 0.001, "weight_decay": 0.0001, "epochs": 10}
-    print(single_gpu_train(hypar))
+    hypar = {"word_embedding_dim": 100, "pos_embedding_dim": 20, "lstm_hidden_dim": 400, "lstm_num_layers": 3, "arch_mlp_size": 500, "label_mlp_size": 100, "batch_size": 32, "lr": 2e-3, "weight_decay": 1e-4 , "dropout": 0.1, "epochs": 10}
+    valid_loss, train_loss, stats = single_gpu_train(hypar)
+    print(stats)
+    plot(valid_loss, train_loss)
+

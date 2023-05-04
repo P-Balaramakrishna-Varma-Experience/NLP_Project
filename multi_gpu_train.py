@@ -10,7 +10,14 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 import os
+import matplotlib.pyplot as plt
 
+
+def plot_data(Data):
+    plt.plot(Data[:, 0], label="train loss")
+    plt.plot(Data[:, 1], label="valid loss")
+    plt.legend()
+    plt.savefig("loss1.png")
 
 def train_epoch(model, dataloader, loss_func, optimizer, device):
     model.train()
@@ -115,13 +122,14 @@ def multi_gpu_train(rank, world_size, hypar, queue, Event):
         valid_losss.append(valid_loss)
         train_losss.append(train_loss)
     
+    print(eval(model, test_dataloader, loss_func, device))
+
     loss_values = torch.zeros((epochs, 2))
     loss_values[:][0] = torch.tensor(train_losss)
     loss_values[:][1] = torch.tensor(valid_losss)
     queue.put(loss_values)
     Event.wait()
 
-    print("hurray")
     destroy_process_group()
     return valid_losss, train_losss
 
@@ -152,6 +160,7 @@ def get_stats_multi_gpu(hyperpar):
 
 
 if __name__ == "__main__":
-    hypar = {"word_embedding_dim": 100, "pos_embedding_dim": 20, "lstm_hidden_dim": 128, "lstm_num_layers": 2, "reduce_dim": 60, "mlp_hidden_dim": 50, "batch_size": 32, "lr": 0.001, "weight_decay": 0.0001, "epochs": 2}
+    hypar = {"word_embedding_dim": 100, "pos_embedding_dim": 20, "lstm_hidden_dim": 128, "lstm_num_layers": 2, "reduce_dim": 60, "mlp_hidden_dim": 50, "batch_size": 512, "lr": 0.001, "weight_decay": 0.0001, "epochs": 2}
     Data = get_stats_multi_gpu(hypar)
-    print(Data)
+    #print(Data)
+    plot_data(Data)
