@@ -8,11 +8,12 @@ import math
 
 import matplotlib.pyplot as plt
 
-def plot(valid_losss, train_losss):
+def plot(valid_losss, train_losss, filename):
+    plt.clf()
     plt.plot(valid_losss, label="valid loss")
     plt.plot(train_losss, label="train loss")
     plt.legend()
-    plt.savefig("loss.png")
+    plt.savefig(filename)
 
 
 def train_epoch(model, dataloader, loss_func, optimizer, device):
@@ -117,7 +118,38 @@ def single_gpu_train(hypar):
 
 if __name__ == "__main__":
     hypar = {"word_embedding_dim": 100, "pos_embedding_dim": 20, "lstm_hidden_dim": 400, "lstm_num_layers": 3, "arch_mlp_size": 500, "label_mlp_size": 100, "batch_size": 32, "lr": 2e-3, "weight_decay": 1e-4 , "dropout": 0.1, "epochs": 10}
-    valid_loss, train_loss, stats = single_gpu_train(hypar)
-    print(stats)
-    plot(valid_loss, train_loss)
+    
+    # hypar["dropout"] = 0.1
+    # valid_loss, train_loss, stats = single_gpu_train(hypar)
+    # print("dropout = 0.1", stats)
+    # plot(valid_loss, train_loss, "dropout_01.png")
 
+    # hypar["dropout"] = 0.2
+    # valid_loss, train_loss, stats = single_gpu_train(hypar)
+    # print("dropout = 0.2", stats)
+    # plot(valid_loss, train_loss, "dropout_02.png")
+
+    # hypar["dropout"] = 0.3
+    # valid_loss, train_loss, stats = single_gpu_train(hypar)
+    # print("dropout = 0.3", stats)
+    # plot(valid_loss, train_loss, "dropout_03.png")
+
+    # hypar["dropout"] = 0.4
+    # valid_loss, train_loss, stats = single_gpu_train(hypar)
+    # print("dropout = 0.4", stats)
+    # plot(valid_loss, train_loss, "dropout_04.png")
+
+    hypar["dropout"] = 0.5
+    valid_loss, train_loss, stats = single_gpu_train(hypar)
+    print("dropout = 0.5", stats)
+    plot(valid_loss, train_loss, "dropout_05.png")
+
+    hypar["dropout"] = 0.6
+    valid_loss, train_loss, stats = single_gpu_train(hypar)
+    print("dropout = 0.6", stats)
+    plot(valid_loss, train_loss, "dropout_06.png")
+
+    hypar["dropout"] = 0.8
+    valid_loss, train_loss, stats = single_gpu_train(hypar)
+    print("dropout = 0.8", stats)
+    plot(valid_loss, train_loss, "dropout_06.png")
