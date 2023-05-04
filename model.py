@@ -53,6 +53,7 @@ class fixed_class_biaffine(nn.Module):
         bias_term = bias_matrix.expand(tails.shape[0], self.l, tails.shape[1])
         return tails_head_term + bias_term + head_u_tail_term
 
+
 class DepParser(nn.Module):
     def __init__(self, word_vocab, pos_vocab, dep_vocab, word_emb_size, pos_emb_size, hidden_dim, bilstm_layers, reduced_size, mlp_hidden_dim):
         super().__init__()
