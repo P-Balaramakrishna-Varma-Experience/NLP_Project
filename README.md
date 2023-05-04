@@ -10,3 +10,21 @@ dict_keys(['id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'de
 ## optimization
 - multigpu
 - pytorch 2.0
+
+## loss (root modeling and padding)
+have visulaiexe spit into two parts
+    - do not include loss for padded words
+    - do not include loss for root word
+- root word progression throught the system  (verify) -- [two option biltml layer expriment and decide]
+
+- test accuryise properly
+
+
+
+## performance
+- 20sec per epoc (6 sec for loss function value !!)
+- have to check in ada bigger bactch size, and parallizing
+
+
+## Correctness
+- Variable and fixed class biaffine
